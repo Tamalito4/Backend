@@ -1,12 +1,10 @@
 package com.albergue.MiProyecto.controller;
 
-
 import com.albergue.MiProyecto.model.Usuario;
 import com.albergue.MiProyecto.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,54 +14,43 @@ import java.util.Map;
 public class UsuarioController {
 
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private UsuarioRepository usuarioRepo;
 
-@PostMapping("/registro")
-public Map<String, Object> registrar(@RequestBody Map<String, Object> data) {
-    Map<String, Object> response = new HashMap<>();
-    String usuario = (String) data.get("usuario");
+    @PostMapping("/registro")
+    public Map<String, Object> registrar(@RequestBody Usuario usuario) {
+        Map<String, Object> response = new HashMap<>();
 
-    if (usuarioRepository.findByUsuario(usuario).isPresent()) {
-        response.put("status", "error");
-        response.put("message", "El usuario ya está registrado.");
+        if (usuarioRepo.findByUsuario(usuario.getUsuario()).isPresent()) {
+            response.put("status", "error");
+            response.put("message", "El usuario ya existe.");
+            return response;
+        }
+
+        usuario.setRol("USER"); // Por defecto
+        usuarioRepo.save(usuario);
+
+        response.put("status", "ok");
+        response.put("message", "Registro exitoso.");
         return response;
     }
 
-    Usuario nuevo = new Usuario();
-    nuevo.setNombreCompleto((String) data.get("nombreCompleto"));
-    nuevo.setLugarNacimiento((String) data.get("lugarNacimiento"));
-    nuevo.setFechaNacimiento(LocalDate.parse((String) data.get("fechaNacimiento")));
-    nuevo.setCorreo((String) data.get("correo"));
-    nuevo.setTelefono((String) data.get("telefono"));
-    nuevo.setUsuario(usuario);
-    nuevo.setContrasena((String) data.get("contrasena"));
+    @PostMapping("/login")
+    public Map<String, Object> login(@RequestBody Map<String, String> datos) {
+        String usuario = datos.get("usuario");
+        String contrasena = datos.get("contrasena");
+        Map<String, Object> response = new HashMap<>();
 
-    usuarioRepository.save(nuevo);
-
-    response.put("status", "ok");
-    response.put("message", "Registro exitoso.");
-    return response;
-}
-
-@PostMapping("/login")
-public Map<String, Object> login(@RequestBody Map<String, String> data) {
-    String usuario = data.get("usuario");
-    String contrasena = data.get("contrasena");
-
-    Map<String, Object> response = new HashMap<>();
-
-    return usuarioRepository.findByUsuario(usuario)
-            .filter(u -> u.getContrasena().equals(contrasena))
-            .map(u -> {
-                response.put("status", "ok");
-                response.put("message", "Login exitoso.");
-                return response;
-            })
-            .orElseGet(() -> {
-                response.put("status", "error");
-                response.put("message", "Usuario o contraseña incorrectos.");
-                return response;
-            });
-}
-
+        return usuarioRepo.findByUsuarioAndContrasena(usuario, contrasena)
+                .map(u -> {
+                    response.put("status", "ok");
+                    response.put("rol", u.getRol());
+                    response.put("message", "Inicio de sesión exitoso.");
+                    return response;
+                })
+                .orElseGet(() -> {
+                    response.put("status", "error");
+                    response.put("message", "Credenciales incorrectas.");
+                    return response;
+                });
+    }
 }
