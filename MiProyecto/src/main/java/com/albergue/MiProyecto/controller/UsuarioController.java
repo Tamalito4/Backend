@@ -5,6 +5,13 @@ import com.albergue.MiProyecto.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,4 +60,41 @@ public class UsuarioController {
                     return response;
                 });
     }
+@GetMapping("/listar")
+public List<Usuario> listarUsuarios() {
+    return usuarioRepo.findAll()
+            .stream()
+            .filter(u -> !"ADMIN".equals(u.getRol()))
+            .collect(Collectors.toList());
+}
+
+@PutMapping("/actualizar/{id}")
+public ResponseEntity<String> actualizarUsuario(@PathVariable Long id, @RequestBody Map<String, String> datos) {
+    return usuarioRepo.findById(id).map(u -> {
+        u.setUsuario(datos.get("usuario"));
+        u.setCorreo(datos.get("correo"));
+        u.setRol(datos.get("rol"));
+        usuarioRepo.save(u);
+        return ResponseEntity.ok("Usuario actualizado.");
+    }).orElse(ResponseEntity.notFound().build());
+}
+
+@DeleteMapping("/eliminar/{id}")
+public ResponseEntity<String> eliminarUsuario(@PathVariable Long id) {
+    return usuarioRepo.findById(id).map(u -> {
+        if ("ADMIN".equals(u.getRol())) {
+            return ResponseEntity.badRequest().body("No se puede eliminar un administrador.");
+        }
+        usuarioRepo.deleteById(id);
+        return ResponseEntity.ok("Usuario eliminado.");
+    }).orElse(ResponseEntity.notFound().build());
+}
+@GetMapping("/{usuario}")
+public ResponseEntity<Usuario> obtenerUsuario(@PathVariable String usuario) {
+    return usuarioRepo.findByUsuario(usuario)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+}
+
+
 }
