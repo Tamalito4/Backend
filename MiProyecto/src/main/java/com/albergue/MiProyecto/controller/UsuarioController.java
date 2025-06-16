@@ -2,6 +2,7 @@ package com.albergue.MiProyecto.controller;
 
 import com.albergue.MiProyecto.model.Usuario;
 import com.albergue.MiProyecto.repository.UsuarioRepository;
+import java.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -96,5 +97,48 @@ public ResponseEntity<Usuario> obtenerUsuario(@PathVariable String usuario) {
             .orElse(ResponseEntity.notFound().build());
 }
 
+@PutMapping("/cambiar-contrasena/{usuario}")
+public ResponseEntity<String> cambiarContrasena(@PathVariable String usuario, @RequestBody Map<String, String> datos) {
+    String actual = datos.get("actual");
+    String nueva = datos.get("nueva");
+
+    Optional<Usuario> optionalUsuario = usuarioRepo.findByUsuario(usuario);
+
+    if (optionalUsuario.isPresent()) {
+        Usuario u = optionalUsuario.get();
+        if (!u.getContrasena().equals(actual)) {
+            return ResponseEntity.badRequest().body("La contraseña actual no coincide.");
+        }
+
+        u.setContrasena(nueva);
+        usuarioRepo.save(u);  // Aquí se dispara el trigger en la base de datos
+
+        return ResponseEntity.ok("Contraseña actualizada.");
+    }
+
+    return ResponseEntity.notFound().build();
+}
+
+@PutMapping("/actualizar-por-usuario/{usuario}")
+public ResponseEntity<String> actualizarPorUsuario(@PathVariable String usuario, @RequestBody Map<String, String> datos) {
+    return usuarioRepo.findByUsuario(usuario).map(u -> {
+        u.setNombreCompleto(datos.get("nombreCompleto"));
+        u.setCorreo(datos.get("correo"));
+        u.setTelefono(datos.get("telefono"));
+        u.setLugarNacimiento(datos.get("lugarNacimiento"));
+
+        try {
+            String fechaTexto = datos.get("fechaNacimiento");
+            if (fechaTexto != null && !fechaTexto.isEmpty()) {
+                u.setFechaNacimiento(LocalDate.parse(fechaTexto));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Fecha de nacimiento inválida.");
+        }
+
+        usuarioRepo.save(u);
+        return ResponseEntity.ok("Datos actualizados correctamente.");
+    }).orElse(ResponseEntity.notFound().build());
+}
 
 }
