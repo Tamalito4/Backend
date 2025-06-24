@@ -75,4 +75,10 @@ public ResponseEntity<String> solicitarAdopcion(@RequestBody Map<String, String>
     public List<Map<String, Object>> obtenerEstados(@PathVariable String usuario) {
         return jdbc.queryForList("SELECT * FROM adopcion WHERE usuario = ?", usuario);
     }
+
+@GetMapping("/todas")
+public List<Map<String, Object>> listarTodas() {
+    return jdbc.queryForList("SELECT * FROM adopcion ORDER BY fecha DESC");
+}
+
 }
